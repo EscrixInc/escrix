@@ -14,13 +14,30 @@ const { execSync, spawn } = require('child_process')
 const app  = express()
 app.use(express.json({ limit: '1mb' }))
 
+// ── Deployed contract addresses ───────────────────────────────────────────────
+const CONTRACTS = {
+  baseSepolia: {
+    escrow: '0x26031eF27DC648E18d53858197EfA03Bdd1Ba01a',
+    deployedAt: '2026-09-15',
+    chainId: 84532,
+  },
+  // baseMainnet: { escrow: '0x...', chainId: 8453 }  // add when mainnet deployed
+}
+
+const CONTRACT_ADDRESS = CONTRACTS.baseSepolia.escrow
+
 // ── In-memory store (replace with DB in production) ───────────────────────────
 const taskSpecs   = new Map()  // taskId → spec JSON
 const taskResults = new Map()  // taskId → result JSON
 
 // ── Health ────────────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', version: '0.1.0', chain: 'base-sepolia' })
+  res.json({
+    status: 'ok',
+    version: '0.1.0',
+    chain: 'base-sepolia',
+    contract: CONTRACT_ADDRESS,
+  })
 })
 
 // ── POST /v1/specs — Store task specification off-chain ───────────────────────
