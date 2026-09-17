@@ -9,6 +9,7 @@
 
 const express  = require('express')
 const crypto   = require('crypto')
+const { ethers } = require('ethers')
 const { execSync, spawn } = require('child_process')
 
 const app  = express()
@@ -17,14 +18,41 @@ app.use(express.json({ limit: '1mb' }))
 // ── Deployed contract addresses ───────────────────────────────────────────────
 const CONTRACTS = {
   baseSepolia: {
-    escrow: '0x26031eF27DC648E18d53858197EfA03Bdd1Ba01a',
-    deployedAt: '2026-09-15',
+    escrow: '0x51F74f85dccD5F5048e2De44A6F4221Fc7c20574',
+    usdc:   '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
+    deployedAt: '2026-09-16',
     chainId: 84532,
   },
-  // baseMainnet: { escrow: '0x...', chainId: 8453 }  // add when mainnet deployed
+  baseMainnet: {
+    // escrow: '0x...',   // deploy when ready
+    usdc: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+    chainId: 8453,
+  },
 }
 
 const CONTRACT_ADDRESS = CONTRACTS.baseSepolia.escrow
+const NETWORK = CONTRACTS.baseSepolia
+
+// ── Verifier node on-chain signer (optional — set VERIFIER_PRIVATE_KEY env var) ───────
+// Without this, the API only does off-chain verification and returns the verdict.
+// With it, the API automatically calls verify() on the smart contract.
+const ESCROW_ABI = [
+  'function verify(bytes32 taskId, bool passed, string calldata note) external',
+  'function getTask(bytes32 taskId) external view returns (tuple(address poster, address executor, uint256 rewardUsdc, uint256 executorBond, bytes32 specHash, bytes32 resultHash, uint8 status, uint256 createdAt, uint256 acceptedAt, uint256 verifiedAt, string verifierNote))',
+]
+
+let verifierSigner = null
+let escrowContract = null
+if (process.env.VERIFIER_PRIVATE_KEY) {
+  try {
+    const provider = new ethers.JsonRpcProvider(NETWORK.rpcUrl)
+    verifierSigner  = new ethers.Wallet(process.env.VERIFIER_PRIVATE_KEY, provider)
+    escrowContract  = new ethers.Contract(NETWORK.escrow, ESCROW_ABI, verifierSigner)
+    console.log(`Verifier node active: ${verifierSigner.address}`)
+  } catch (e) {
+    console.warn('VERIFIER_PRIVATE_KEY set but wallet init failed:', e.message)
+  }
+}
 
 // ── In-memory store (replace with DB in production) ───────────────────────────
 const taskSpecs   = new Map()  // taskId → spec JSON
@@ -140,14 +168,27 @@ print(json.dumps(output))
 
     const outcome = JSON.parse(proc.stdout.trim())
 
+    // Auto-call verify() on-chain if verifier node is configured
+    let onchainTx = null
+    if (escrowContract) {
+      try {
+        const tx = await escrowContract.verify(task_id, outcome.passed, outcome.note)
+        await tx.wait()
+        onchainTx = tx.hash
+      } catch (err) {
+        console.error('on-chain verify() failed:', err.message)
+      }
+    }
+
     res.json({
       task_id,
       passed:      outcome.passed,
       note:        outcome.note,
       result_hash: outcome.result_hash,
-      message:     outcome.passed
-        ? '✅ Verification passed — call verify(task_id, true, note) on-chain'
-        : '❌ Verification failed — call verify(task_id, false, note) on-chain',
+      onchain_tx:  onchainTx,
+      message:     onchainTx
+        ? (outcome.passed ? '✅ Verified on-chain — USDC released to executor' : '❌ Verified on-chain — USDC refunded, bond slashed')
+        : (outcome.passed ? '✅ Passed — call verify(task_id, true, note) on-chain' : '❌ Failed — call verify(task_id, false, note) on-chain'),
     })
 
   } catch (err) {

@@ -1,27 +1,22 @@
 {
-  "name": "escrix",
+  "name": "@escrix/sdk",
   "version": "0.1.0",
-  "description": "AI Agent-to-Agent programmable escrow & task verification protocol SDK",
+  "description": "Escrix SDK — AI Agent-to-Agent programmable escrow & task verification",
   "main": "index.js",
-  "types": "index.d.ts",
-  "keywords": [
-    "ai-agents",
-    "escrow",
-    "verification",
-    "base",
-    "usdc",
-    "web3",
-    "mcp",
-    "langchain"
-  ],
-  "author": "Escrix Inc. <dev@escrix.dev>",
+  "keywords": ["escrow", "ai-agents", "base", "usdc", "web3"],
   "license": "MIT",
   "homepage": "https://escrix.dev",
   "repository": {
     "type": "git",
     "url": "https://github.com/haodongtuo/escrix"
   },
-  "bugs": {
-    "url": "https://github.com/haodongtuo/escrix/issues"
+  "dependencies": {
+    "ethers": "^6.13.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "peerDependencies": {
+    "ethers": "^6.0.0"
   }
 }

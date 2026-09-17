@@ -24,7 +24,7 @@ interface IERC20 {
 contract EscrixEscrow {
 
     // ── Constants ──────────────────────────────────────────────────────────────
-    address public constant USDC = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913; // Base USDC
+    address public immutable USDC; // set in constructor (mainnet: 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913)
     uint256 public constant DISPUTE_WINDOW  = 24 hours;
     uint256 public constant EXECUTOR_WINDOW = 48 hours; // time to accept after posting
     uint256 public constant SLASH_BPS       = 500;      // 5% of reward slashed on fail
@@ -70,9 +70,15 @@ contract EscrixEscrow {
     modifier onlyVerifier() { require(verifierNodes[msg.sender], "not verifier"); _; }
 
     // ── Constructor ────────────────────────────────────────────────────────────
-    constructor(address _treasury) {
+    /**
+     * @param _treasury  Address that receives protocol fees and slashed bonds
+     * @param _usdc      USDC token address (Base mainnet: 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913)
+     *                                       (Base Sepolia:  0x036CbD53842c5426634e7929541eC2318f3dCF7e)
+     */
+    constructor(address _treasury, address _usdc) {
         owner    = msg.sender;
         treasury = _treasury;
+        USDC     = _usdc;
         verifierNodes[msg.sender] = true; // deployer is initial verifier
     }
 
