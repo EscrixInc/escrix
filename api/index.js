@@ -148,23 +148,65 @@ app.post('/v1/verify', async (req, res) => {
   if (!spec)   return res.status(404).json({ error: 'Spec not found' })
   if (!result) return res.status(404).json({ error: 'Result not found' })
 
-  // Run Python verifier sandbox
+  // Run Python verifier sandbox (inline, no external file dependency)
   try {
     const verifyInput = JSON.stringify({ spec, result })
-    const pyScript    = `
-import json, sys
-sys.path.insert(0, '/app/verifier')
-from sandbox import verify_task
+    const pyScript = `
+import json, sys, hashlib, subprocess, tempfile, textwrap
+from pathlib import Path
+
 data   = json.loads(sys.stdin.read())
-output = verify_task(data['spec'], data['result'])
-print(json.dumps(output))
+spec   = data['spec']
+result = data['result']
+
+implementation = result.get('implementation', '').strip()
+test_cases     = spec.get('test_cases', [])
+allowed_imports = spec.get('allowed_imports', [])
+
+if not implementation:
+    print(json.dumps({'passed': False, 'note': 'No implementation provided'}))
+    sys.exit(0)
+
+if not test_cases:
+    print(json.dumps({'passed': False, 'note': 'No test cases in spec'}))
+    sys.exit(0)
+
+import_lines = '\\n'.join(f'import {m}' for m in allowed_imports)
+test_lines   = '\\n'.join(f'    {t}' for t in test_cases)
+
+test_script = f"""
+{import_lines}
+{implementation}
+def run_tests():
+{test_lines if test_lines else '    pass'}
+run_tests()
+print('__ESCRIX_PASS__')
+"""
+
+canonical    = json.dumps(result, sort_keys=True)
+result_hash  = '0x' + hashlib.sha3_256(canonical.encode()).hexdigest()
+
+try:
+    proc = subprocess.run(['python3', '-c', test_script],
+        capture_output=True, text=True, timeout=10)
+    if '__ESCRIX_PASS__' in proc.stdout:
+        print(json.dumps({'passed': True, 'note': 'All test cases passed', 'result_hash': result_hash}))
+    else:
+        detail = (proc.stderr or proc.stdout)[:400]
+        print(json.dumps({'passed': False, 'note': f'Tests failed: {detail}', 'result_hash': result_hash}))
+except Exception as e:
+    print(json.dumps({'passed': False, 'note': str(e), 'result_hash': result_hash}))
 `
+
     const proc = require('child_process').spawnSync(
       'python3', ['-c', pyScript],
       { input: verifyInput, encoding: 'utf-8', timeout: 30000 }
     )
 
     if (proc.error) throw proc.error
+    if (!proc.stdout || !proc.stdout.trim()) {
+      throw new Error(proc.stderr || 'Python verifier produced no output')
+    }
 
     const outcome = JSON.parse(proc.stdout.trim())
 
