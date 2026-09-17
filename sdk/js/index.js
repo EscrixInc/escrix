@@ -107,9 +107,9 @@ class EscrixClient {
     const rewardAmount = BigInt(Math.round(rewardUsdc * 1e6))
 
     // 3. Approve USDC spend
-    const allowance = await this._usdc.allowance(this._signer.address, this._network.escrow)
+    const allowance = BigInt(await this._usdc.allowance(this._signer.address, this._network.escrow))
     if (allowance < rewardAmount) {
-      const approveTx = await this._usdc.approve(this._network.escrow, rewardAmount)
+      const approveTx = await this._usdc.approve(this._network.escrow, rewardAmount * 10n) // approve 10x to reduce future approvals
       await approveTx.wait()
     }
 
@@ -145,9 +145,9 @@ class EscrixClient {
     const task = await this.getTask(taskId)
     const bond = BigInt(task.rewardUsdc) * 500n / 10000n
 
-    const allowance = await this._usdc.allowance(this._signer.address, this._network.escrow)
+    const allowance = BigInt(await this._usdc.allowance(this._signer.address, this._network.escrow))
     if (allowance < bond) {
-      const approveTx = await this._usdc.approve(this._network.escrow, bond)
+      const approveTx = await this._usdc.approve(this._network.escrow, bond * 10n) // approve 10x buffer
       await approveTx.wait()
     }
 
