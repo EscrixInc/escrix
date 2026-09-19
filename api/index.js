@@ -11,6 +11,31 @@ const express  = require('express')
 const crypto   = require('crypto')
 const { ethers } = require('ethers')
 const { execSync, spawn } = require('child_process')
+const { Pool } = require('pg')
+
+// ── PostgreSQL connection ─────────────────────────────────────────────────────
+const pool = new Pool({ connectionString: process.env.DATABASE_URL })
+
+async function dbGetSpec(specHash) {
+  const r = await pool.query('SELECT spec FROM task_specs WHERE spec_hash=$1', [specHash])
+  return r.rows[0]?.spec || null
+}
+async function dbSetSpec(specHash, spec) {
+  await pool.query(
+    'INSERT INTO task_specs(spec_hash,spec) VALUES($1,$2) ON CONFLICT(spec_hash) DO NOTHING',
+    [specHash, JSON.stringify(spec)]
+  )
+}
+async function dbGetResult(taskId) {
+  const r = await pool.query('SELECT result FROM task_results WHERE task_id=$1', [taskId])
+  return r.rows[0]?.result || null
+}
+async function dbSetResult(taskId, result) {
+  await pool.query(
+    'INSERT INTO task_results(task_id,result) VALUES($1,$2) ON CONFLICT(task_id) DO UPDATE SET result=$2',
+    [taskId, JSON.stringify(result)]
+  )
+}
 
 const app  = express()
 app.use(express.json({ limit: '1mb' }))
@@ -54,9 +79,7 @@ if (process.env.VERIFIER_PRIVATE_KEY) {
   }
 }
 
-// ── In-memory store (replace with DB in production) ───────────────────────────
-const taskSpecs   = new Map()  // taskId → spec JSON
-const taskResults = new Map()  // taskId → result JSON
+// In-memory fallback removed — now using PostgreSQL via pool above
 
 // ── Health ────────────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
@@ -75,7 +98,7 @@ app.get('/health', (req, res) => {
  *
  * Body: { type, function_signature, test_cases, allowed_imports?, reward_usdc }
  */
-app.post('/v1/specs', (req, res) => {
+app.post('/v1/specs', async (req, res) => {
   const spec = req.body
   if (!spec.type || !spec.test_cases) {
     return res.status(400).json({ error: 'type and test_cases are required' })
@@ -85,7 +108,7 @@ app.post('/v1/specs', (req, res) => {
   const canonical = JSON.stringify(spec, Object.keys(spec).sort())
   const specHash  = '0x' + crypto.createHash('sha3-256').update(canonical).digest('hex')
 
-  taskSpecs.set(specHash, spec)
+  await dbSetSpec(specHash, spec)
 
   res.json({
     spec_hash:  specHash,
@@ -95,8 +118,8 @@ app.post('/v1/specs', (req, res) => {
 })
 
 // ── GET /v1/specs/:specHash — Retrieve task spec ──────────────────────────────
-app.get('/v1/specs/:specHash', (req, res) => {
-  const spec = taskSpecs.get(req.params.specHash)
+app.get('/v1/specs/:specHash', async (req, res) => {
+  const spec = await dbGetSpec(req.params.specHash)
   if (!spec) return res.status(404).json({ error: 'Spec not found' })
   res.json(spec)
 })
@@ -108,7 +131,7 @@ app.get('/v1/specs/:specHash', (req, res) => {
  *
  * Body: { task_id, implementation }
  */
-app.post('/v1/results', (req, res) => {
+app.post('/v1/results', async (req, res) => {
   const { task_id, implementation } = req.body
   if (!task_id || !implementation) {
     return res.status(400).json({ error: 'task_id and implementation are required' })
@@ -118,7 +141,7 @@ app.post('/v1/results', (req, res) => {
   const canonical = JSON.stringify(result, Object.keys(result).sort())
   const resultHash = '0x' + crypto.createHash('sha3-256').update(canonical).digest('hex')
 
-  taskResults.set(task_id, result)
+  await dbSetResult(task_id, result)
 
   res.json({
     result_hash: resultHash,
@@ -142,8 +165,8 @@ app.post('/v1/verify', async (req, res) => {
     return res.status(401).json({ error: 'Unauthorized verifier' })
   }
 
-  const spec   = taskSpecs.get(spec_hash)
-  const result = taskResults.get(task_id)
+  const spec   = await dbGetSpec(spec_hash)
+  const result = await dbGetResult(task_id)
 
   if (!spec)   return res.status(404).json({ error: 'Spec not found' })
   if (!result) return res.status(404).json({ error: 'Result not found' })
