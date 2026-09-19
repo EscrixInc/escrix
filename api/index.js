@@ -242,8 +242,8 @@ except Exception as e:
         await tx.wait()
         onchainTx = tx.hash
       } catch (err) {
-        onchainErr = err.message
-        console.error('on-chain verify() failed:', err.message)
+        onchainErr = err.shortMessage || err.reason || err.message || JSON.stringify(err)
+        console.error('on-chain verify() failed:', onchainErr)
       }
     } else {
       onchainErr = 'escrowContract not initialized (VERIFIER_PRIVATE_KEY missing or invalid)'
