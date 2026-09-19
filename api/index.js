@@ -236,18 +236,14 @@ except Exception as e:
 
     // Auto-call verify() on-chain if verifier node is configured
     let onchainTx = null
-    let onchainErr = null
     if (escrowContract) {
       try {
         const tx = await escrowContract.verify(task_id, outcome.passed, outcome.note)
         await tx.wait()
         onchainTx = tx.hash
       } catch (err) {
-        onchainErr = err.shortMessage || err.reason || err.message || JSON.stringify(err)
-        console.error('on-chain verify() failed:', onchainErr)
+        console.error('on-chain verify() failed:', err.shortMessage || err.message)
       }
-    } else {
-      onchainErr = 'escrowContract not initialized (VERIFIER_PRIVATE_KEY missing or invalid)'
     }
 
     res.json({
@@ -256,7 +252,6 @@ except Exception as e:
       note:        outcome.note,
       result_hash: outcome.result_hash,
       onchain_tx:  onchainTx,
-      onchain_err: onchainErr,
       message:     onchainTx
         ? (outcome.passed ? '✅ Verified on-chain — USDC released to executor' : '❌ Verified on-chain — USDC refunded, bond slashed')
         : (outcome.passed ? '✅ Passed — call verify(task_id, true, note) on-chain' : '❌ Failed — call verify(task_id, false, note) on-chain'),
