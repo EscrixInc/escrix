@@ -47,6 +47,7 @@ const CONTRACTS = {
     usdc:   '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
     deployedAt: '2026-09-16',
     chainId: 84532,
+    rpcUrl: process.env.SEPOLIA_RPC_URL || 'https://base-sepolia.blockpi.network/v1/rpc/public',
   },
   baseMainnet: {
     // escrow: '0x...',   // deploy when ready
