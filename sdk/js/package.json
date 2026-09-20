@@ -1,6 +1,6 @@
 {
   "name": "@escrix/sdk",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "description": "Escrix SDK — AI Agent-to-Agent programmable escrow & task verification",
   "main": "index.js",
   "keywords": ["escrow", "ai-agents", "base", "usdc", "web3"],

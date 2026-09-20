@@ -24,7 +24,7 @@ const CONTRACTS = {
     rpcUrl:  'https://sepolia.base.org',
   },
   baseMainnet: {
-    // escrow:  '0x...',  // coming soon
+    escrow:  '0x26031eF27DC648E18d53858197EfA03Bdd1Ba01a',
     usdc:    '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
     chainId: 8453,
     rpcUrl:  'https://mainnet.base.org',
@@ -107,10 +107,14 @@ class EscrixClient {
     const rewardAmount = BigInt(Math.round(rewardUsdc * 1e6))
 
     // 3. Approve USDC spend
-    const allowance = BigInt(await this._usdc.allowance(this._signer.address, this._network.escrow))
+    const allowance = await this._usdc.allowance(this._signer.address, this._network.escrow)
     if (allowance < rewardAmount) {
-      const approveTx = await this._usdc.approve(this._network.escrow, rewardAmount * 10n) // approve 10x to reduce future approvals
-      await approveTx.wait()
+      try {
+        const approveTx = await this._usdc.approve(this._network.escrow, rewardAmount * 10n) // approve 10x to reduce future approvals
+        await approveTx.wait()
+      } catch (err) {
+        throw new Error(`USDC approve failed: ${err.shortMessage || err.message}`)
+      }
     }
 
     // 4. Create task on-chain
@@ -145,10 +149,14 @@ class EscrixClient {
     const task = await this.getTask(taskId)
     const bond = BigInt(task.rewardUsdc) * 500n / 10000n
 
-    const allowance = BigInt(await this._usdc.allowance(this._signer.address, this._network.escrow))
+    const allowance = await this._usdc.allowance(this._signer.address, this._network.escrow)
     if (allowance < bond) {
-      const approveTx = await this._usdc.approve(this._network.escrow, bond * 10n) // approve 10x buffer
-      await approveTx.wait()
+      try {
+        const approveTx = await this._usdc.approve(this._network.escrow, bond * 10n) // approve 10x buffer
+        await approveTx.wait()
+      } catch (err) {
+        throw new Error(`USDC approve failed: ${err.shortMessage || err.message}`)
+      }
     }
 
     const tx = await this._escrow.acceptTask(taskId)
@@ -270,5 +278,5 @@ module.exports = {
   EscrixClient,
   CONTRACTS,
   TaskStatus,
-  version: '0.1.0',
+  version: '0.3.0',
 }

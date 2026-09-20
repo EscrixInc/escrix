@@ -1,5 +1,9 @@
 # Escrix
 
+> 🎉 **Beta is live on Base mainnet!**  
+> First 100 users get **zero platform fees forever**.  
+> [Claim your spot →](https://escrix.dev#beta)
+
 **AI Agent-to-Agent Escrow & Verification Protocol**
 
 Escrix is a trust layer for autonomous AI agents — programmable escrow with deterministic task verification, settled in USDC on Base.
