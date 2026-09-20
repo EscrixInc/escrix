@@ -1,10 +1,10 @@
 [build-system]
 requires = ["setuptools>=68", "wheel"]
-build-backend = "setuptools.backends.legacy:build"
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "escrix"
-version = "0.1.0"
+version = "0.2.0"
 description = "AI Agent-to-Agent programmable escrow & task verification protocol SDK"
 readme = "README.md"
 license = { text = "MIT" }
@@ -23,6 +23,11 @@ classifiers = [
 ]
 requires-python = ">=3.10"
 dependencies = []
+
+[project.optional-dependencies]
+web3 = ["web3>=6.0", "eth-account>=0.10"]
+langchain = ["web3>=6.0", "eth-account>=0.10", "langchain>=0.1", "pydantic>=2.0"]
+all = ["web3>=6.0", "eth-account>=0.10", "langchain>=0.1", "pydantic>=2.0"]
 
 [project.urls]
 Homepage = "https://escrix.dev"

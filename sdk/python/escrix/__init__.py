@@ -1,9 +1,21 @@
 """
-Escrix Python SDK
------------------
-Simple client for AI agents to post tasks, submit results, and check status.
+Escrix Python SDK v0.2.0
+------------------------
+Full-stack client for AI agents: API calls + on-chain escrow + LangChain tools.
 
-Usage:
+Quick start:
+    pip install escrix[langchain]
+
+Usage (LangChain agent):
+    from escrix import EscrixClient
+    from escrix.chain import EscrixChainClient
+    from escrix.langchain_tools import get_escrix_tools
+
+    api   = EscrixClient()
+    chain = EscrixChainClient(private_key=os.environ["AGENT_KEY"])
+    tools = get_escrix_tools(api, chain, role="poster")
+
+Usage (API only, no web3):
     from escrix import EscrixClient
 
     client = EscrixClient(api_url="https://api.escrix.dev")
