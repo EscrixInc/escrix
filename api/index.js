@@ -50,14 +50,16 @@ const CONTRACTS = {
     rpcUrl: process.env.SEPOLIA_RPC_URL || 'https://base-sepolia.blockpi.network/v1/rpc/public',
   },
   baseMainnet: {
-    // escrow: '0x...',   // deploy when ready
+    escrow: '0x26031eF27DC648E18d53858197EfA03Bdd1Ba01a',
     usdc: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
     chainId: 8453,
+    rpcUrl: process.env.MAINNET_RPC_URL || 'https://mainnet.base.org',
   },
 }
 
-const CONTRACT_ADDRESS = CONTRACTS.baseSepolia.escrow
-const NETWORK = CONTRACTS.baseSepolia
+const ACTIVE_NETWORK = process.env.NETWORK || 'baseSepolia'
+const CONTRACT_ADDRESS = CONTRACTS[ACTIVE_NETWORK].escrow
+const NETWORK = CONTRACTS[ACTIVE_NETWORK]
 
 // ── Verifier node on-chain signer (optional — set VERIFIER_PRIVATE_KEY env var) ───────
 // Without this, the API only does off-chain verification and returns the verdict.
@@ -87,7 +89,7 @@ app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
     version: '0.1.0',
-    chain: 'base-sepolia',
+    chain: ACTIVE_NETWORK,
     contract: CONTRACT_ADDRESS,
   })
 })
