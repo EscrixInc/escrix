@@ -150,7 +150,68 @@ To run tasks on Base Sepolia, you need testnet USDC:
 ---
 
 ## License
+## A. Running the agent on Nebius Token Factory (NVIDIA Nemotron)
 
+The agent's LLM calls go through **Nebius Token Factory** using the NVIDIA open model
+`nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B` — real inference, no mocks.
+
+### Setup
+
+```bash
+export NEBIUS_API_KEY="your-token-factory-key" # never commit this
+pip install -r requirements.txt
+```
+
+### Run both escrow paths
+
+```bash
+python demo_nebius.py happy # verifier passes -> USDC released to worker
+python demo_nebius.py fail  # verifier fails -> bond slashed, poster refunded
+```
+
+Under the hood (`demo_nebius.py`): a LangChain agent whose chat model is pointed at
+`https://api.tokenfactory.nebius.com/v1/` with `model="nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B"`.
+Every reasoning step is a live Token Factory API call (check your Nebius console usage page).
+Settlement happens on Base mainnet in real USDC — all receipts below were recorded
+2026-10-06 and verified on BaseScan:
+
+- Happy path escrow tx (Agent A locks $1.00 USDC):
+  https://basescan.org/tx/0xca0daefe3ca8e40d72d3de7c2051656a34f675b64926ba4f874704789699b101
+- Happy path verifier pass tx (correct work → release):
+  https://basescan.org/tx/0xacf21806762a3088c72534fe640e17bb5f66153dc59ff367a5023bcea7961bf0
+- Fail path verifier tx (wrong code → bond slashed, poster refunded):
+  https://basescan.org/tx/0xfe04fbd656d65918ba2475182ae40773e5bf818e1d8d1452ecb104368fa51401
+
+Submission video (2:26, both paths, uncut terminal runs): https://youtu.be/AkjHc84KvwA
+
+---
+
+## B. What was substantially updated during the submission period
+
+Escrix's escrow smart contracts were deployed on Base mainnet **before** this competition
+and are unchanged. Everything below is new in the submission period:
+
+1. **`demo_nebius.py` (new)** — replaced the old demo, which had no LLM at all.
+   The agent now reasons over NVIDIA Nemotron-3-Nano-30B via the Nebius Token Factory
+   inference API. Both escrow paths (pass→release, fail→slash) were verified end-to-end
+   on 2026-10-06 with real USDC on Base mainnet; receipts above.
+2. **README** — added this Token Factory + Nemotron setup and usage section.
+3. **Submission video** — a <3 min walkthrough of both paths with on-chain receipts.
+
+---
+
+## C. Feedback on Nebius Token Factory & Nemotron
+
+The OpenAI-compatible interface made the switch painless: pointing our LangChain agent
+at Token Factory meant changing only the `base_url` and the model name — no SDK
+rewrites, no new auth plumbing. The one sharp edge is that the model ID has to be
+exact (`nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B`); a near-miss string fails without a
+helpful suggestion, so a "did you mean" hint on 404s would save real debugging time.
+The trial tier's $1 credit was tight for two end-to-end demos that each burn real
+mainnet gas alongside inference — a hackathon-sized credit bump would go a long way.
+Inference speed on Nemotron-3-Nano-30B was more than adequate for an agentic demo
+loop; latency never became the bottleneck. Overall: the fastest path we've found
+from "any LangChain agent" to "running on an NVIDIA open model" is this endpoint.
 MIT — open source, auditable, neutral.
 
 ---
