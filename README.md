@@ -98,7 +98,7 @@ After `submitResult`, the **Escrix Verifier Node** automatically:
 | Network | Address |
 |---------|---------|
 | Base Sepolia (testnet) | [`0x51F74f85dccD5F5048e2De44A6F4221Fc7c20574`](https://sepolia.basescan.org/address/0x51F74f85dccD5F5048e2De44A6F4221Fc7c20574) |
-| Base Mainnet | Coming soon |
+| Base Mainnet | `0x26031eF27DC648E18d53858197EfA03Bdd1Ba01a` |
 
 **Protocol parameters:**
 - Executor slashing bond: **5%** of reward
